@@ -18,6 +18,7 @@ const postGoodsReceipt = async (req, res) => {
         const dealerId = req.user.dealerId; // Assumes dealer context from JWT
 
         if (!orderId || !receivedItems || !Array.isArray(receivedItems)) {
+            console.error('Invalid receipt data:', { body: req.body });
             return res.status(400).json({ success: false, message: 'Invalid receipt data' });
         }
 
@@ -42,7 +43,9 @@ const postGoodsReceipt = async (req, res) => {
         }
 
         if (order.status !== 'Shipped' && order.status !== 'In Transit') {
-            // We permit receipt if it was at least shipped
+            await transaction.rollback();
+            console.error(`Order status invalid for GR: ${order.status}`);
+            return res.status(400).json({ success: false, message: `Order status is ${order.status}. Must be Shipped or In Transit.` });
         }
 
         // 2. Create the Goods Receipt record
